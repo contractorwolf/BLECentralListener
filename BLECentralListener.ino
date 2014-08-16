@@ -11,6 +11,8 @@
 #endif
 
 uint8_t found_address[6];
+uint8_t last_address[6];
+
 
 int LED = 13;
 int DiscoveredLED = 2;
@@ -20,9 +22,18 @@ int DiscoveredButton5V = A1;
 
 void flashLED(int led) {
   digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);               // wait for a second
+  delay(200);               // wait for a second
   digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);               // wait for a second
+  delay(200); 
+  digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(200);               // wait for a second
+  digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
+  delay(200); 
+
+
+
+
+  // wait for a second
 }
 
 
@@ -86,6 +97,11 @@ Serial.println(millis());
         
         if (num_devs > 0){
           memcpy(found_address, &buf[6], 6); // store 1 device address only in this demo
+          //memcpy(last_address, &found_addess, 6); // store 1 device address only in this demo
+          
+          
+          //last_address = found_address;
+          
           
           flashLED(DiscoveredLED);
           //added
@@ -102,6 +118,14 @@ Serial.println(millis());
           }
           //added
 
+ 
+         Serial.print("last mac:\r\n");
+         
+         for(int k = 0; k < 6; k++) {
+              Serial.print(found_address[k]);
+              Serial.print(":");
+         }
+         Serial.println();
  
        }
         break;
@@ -243,7 +267,7 @@ Serial.println(millis());
     p("BUTTON PRESSED\r\n");
     p(" -> Start discovery...\r\n");
     Serial.print("millis:");
-Serial.println(millis());
+    Serial.println(millis());
     biscuit_central_start_discovery();
     
   }
