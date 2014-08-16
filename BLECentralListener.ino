@@ -11,13 +11,21 @@
 #endif
 
 uint8_t found_address[6];
-uint8_t last_address[6];
+uint8_t last_address[6] = { 143,26,194,251,140,48};
 
 
 int LED = 13;
 int DiscoveredLED = 2;
 int DiscoveredButton = A4;
 int DiscoveredButton5V = A1;
+
+unsigned long lastMillis;
+
+
+int scan_delay = 20000;
+
+
+
 
 
 void flashLED(int led) {
@@ -58,6 +66,9 @@ byte ble_event_available()
 
 byte ble_event_process()
 {
+  Serial.print("millis:");
+  Serial.println(millis());
+
   uint8_t type, event_code, data_len, status1;
   uint16_t event;
   uint8_t buf[255];
@@ -71,19 +82,17 @@ byte ble_event_process()
   p("-Type        : 0x%02X\r\n", type);
   p("-EventCode   : 0x%02X\r\n", event_code);
   p("-Data Length : 0x%02X\r\n", data_len);
-  p("-Data: 0x%02X\r\n");
+  p("-Data: \r\n");
+  
   for (int i = 0; i < data_len; i++){
     buf[i] = Serial1.read();
-    
-    
     Serial.print(buf[i]);
-
   }
+  
   p("\r\n");    
   event = BUILD_UINT16(buf[0], buf[1]);
   status1 = buf[2];
-Serial.print("millis:");
-Serial.println(millis());
+
   p(" Event       : 0x%04X\r\n", event);
   p(" Status      : 0x%02X\r\n", status1);
 
@@ -96,14 +105,30 @@ Serial.println(millis());
         p(" NumDevs     : 0x%02X\r\n", num_devs);
         
         if (num_devs > 0){
+          //copies adddress to store
           memcpy(found_address, &buf[6], 6); // store 1 device address only in this demo
-          //memcpy(last_address, &found_addess, 6); // store 1 device address only in this demo
+
+          boolean same = true;
+          //copy all bytes from found_address to last_address
+          for(int k = 0; k < 6; k++) {
+              if(last_address[k] != found_address[k]){
+               same = false; 
+              }
+           }
+
+          Serial.print("same: " );
+          Serial.println(same);
           
           
-          //last_address = found_address;
-          
-          
-          flashLED(DiscoveredLED);
+          if(same){
+
+              //digitalWrite(DiscoveredLED, HIGH);
+
+              flashLED(DiscoveredLED);
+
+          }else{
+              digitalWrite(DiscoveredLED, LOW);
+          }
           //added
           int currentIndex = 6;
           for(int i = 1; i <= num_devs; i++) { 
@@ -119,13 +144,19 @@ Serial.println(millis());
           //added
 
  
-         Serial.print("last mac:\r\n");
-         
+         Serial.print("found_address:\r\n");
          for(int k = 0; k < 6; k++) {
               Serial.print(found_address[k]);
               Serial.print(":");
          }
+         
+         
+         
+         
          Serial.println();
+ 
+       }else{
+         //digitalWrite(DiscoveredLED, LOW);
  
        }
         break;
@@ -183,84 +214,78 @@ void setup()
     digitalWrite(DiscoveredButton5V, HIGH);
   
   
-#if defined(__AVR_ATmega328P__)
-  Serial1.begin(57600);
-  Serial.begin(57600);
+    #if defined(__AVR_ATmega328P__)
+      Serial1.begin(57600);
+      Serial.begin(57600);
 
-  ble_hci_init(&Serial1);
-#else
-  Serial1.begin(57600);
-  Serial.begin(115200);
-  
-  
- //Serial.write("BLE Central Listener Started");
-  
-  
-  while (!Serial);
-  
-  
-   Serial.write("BLE Central Listener Started\r\n");
+      ble_hci_init(&Serial1);
+    #else
+      Serial1.begin(57600);
+      Serial.begin(115200);
+ 
+      while (!Serial);
+ 
+      Serial.write("BLE Central Listener Started\r\n");
    
-   flashLED(LED);
+      flashLED(LED);
 
-   Serial.write("Send D to start discovery mode\r\n");
-   Serial.write("\r\n");
-   Serial.print("millis:");
-Serial.println(millis());
+      Serial.write("Send D to start discovery mode\r\n");
+      Serial.write("\r\n");
+      Serial.print("millis:");
+      Serial.println(millis());
    
-  ble_hci_init();
-#endif
+      ble_hci_init();
+    #endif
 
   biscuit_central_init();
-  
-  
-  
+
+  lastMillis = millis();
   
 }
 
 void loop()
 {
-  while (ble_event_available())
-    ble_event_process();
+    while (ble_event_available())
+      ble_event_process();
     
-  while (Serial.available())
-  {  
-    byte cmd = Serial.read();
-    switch(cmd)
-    {
-      case 'D':
-      case 'd':
-        p(" -> Start discovery...\r\n");
-        Serial.print("millis:");
-Serial.println(millis());
-        biscuit_central_start_discovery();
-        break;
+    while (Serial.available())
+    {  
+      byte cmd = Serial.read();
+      switch(cmd)
+      {
+        case 'D':
+        case 'd':
+          p(" -> Start discovery...\r\n");
+          Serial.print("millis:");
+          Serial.println(millis());
+          biscuit_central_start_discovery();
+          break;
         
-      case 'E':
-      case 'e':
-        p(" -> Connecting to Biscuit peripheral...\r\n");
-        biscuit_central_connect(found_address);
-        break;
+        case 'E':
+        case 'e':
+          p(" -> Connecting to Biscuit peripheral...\r\n");
+          biscuit_central_connect(found_address);
+          break;
       
-      case 'N':
-      case 'n':
-        p(" -> Enable notification to receive data...\r\n");
-        biscuit_central_enable_notification();
-        break;
+        case 'N':
+        case 'n':
+          p(" -> Enable notification to receive data...\r\n");
+          biscuit_central_enable_notification();
+          break;
       
-      case '1':
-        p(" -> Send \"Hello World!\" to the Biscuit peripheral...\r\n");
-        biscuit_central_write_bytes((uint8 *)"Hello World!\r\n", 14);
-        break;
+        case '1':
+          p(" -> Send \"Hello World!\" to the Biscuit peripheral...\r\n");
+          biscuit_central_write_bytes((uint8 *)"Hello World!\r\n", 14);
+          break;
         
-      case '2':
-        p(" -> Send \"I love BLE!\" to the Biscuit peripheral...\r\n");
-        biscuit_central_write_bytes((uint8 *)"I love BLE!\r\n", 13);
-        break;
+        case '2':
+          p(" -> Send \"I love BLE!\" to the Biscuit peripheral...\r\n");
+          biscuit_central_write_bytes((uint8 *)"I love BLE!\r\n", 13);
+          break;
 
-      default:
-        p(" -> Invalid command: %s\r\n", cmd);      
-    }
+        default:
+          p(" -> Invalid command: %s\r\n", cmd);      
+       }
   }
   
   if(analogRead(DiscoveredButton)>100){
@@ -272,6 +297,12 @@ Serial.println(millis());
     
   }
   
+  if((millis()-lastMillis)>scan_delay){
+      lastMillis = millis(); 
+      p("TIME EXPIRED\r\n");
+      p(" -> Start discovery...\r\n");
+      biscuit_central_start_discovery();
+  }
   
   flashLED(LED);
 }
