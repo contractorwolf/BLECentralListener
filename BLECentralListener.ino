@@ -73,7 +73,17 @@ byte ble_event_process()
   uint16_t event;
   uint8_t buf[255];
   
+  
+
+  
+  
+  
+  
+  //below is prob wrong, should iterate through the whole list at once
+  //then decode, i think
   type = Serial1.read();
+  
+  //after first by, wait 35 seconds for t
   delay(35);
   event_code = Serial1.read();
   data_len = Serial1.read();
@@ -82,19 +92,29 @@ byte ble_event_process()
   p("-Type        : 0x%02X\r\n", type);
   p("-EventCode   : 0x%02X\r\n", event_code);
   p("-Data Length : 0x%02X\r\n", data_len);
+  
+
+  
+  
   p("-Data: \r\n");
   
   for (int i = 0; i < data_len; i++){
     buf[i] = Serial1.read();
     Serial.print(buf[i]);
+    Serial.print(":");
   }
-  
-  p("\r\n");    
+  Serial.println();
+  //all bytes have been loaded at this point
+  //translate buffer to info
   event = BUILD_UINT16(buf[0], buf[1]);
   status1 = buf[2];
 
   p(" Event       : 0x%04X\r\n", event);
   p(" Status      : 0x%02X\r\n", status1);
+  
+  
+  p("\r\n");    
+
 
   switch (event)
   {
