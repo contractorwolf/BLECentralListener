@@ -37,10 +37,6 @@ void flashLED(int led) {
   delay(200);               // wait for a second
   digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
   delay(200); 
-
-
-
-
   // wait for a second
 }
 
@@ -66,7 +62,7 @@ byte ble_event_available()
 
 byte ble_event_process()
 {
-  Serial.print("millis:");
+  Serial.print("\r\n millis:");
   Serial.println(millis());
 
   uint8_t type, event_code, data_len, status1;
@@ -79,31 +75,34 @@ byte ble_event_process()
   
   
   
-  //below is prob wrong, should iterate through the whole list at once
-  //then decode, i think
-  type = Serial1.read();
-  
-  //after first by, wait 35 seconds for t
+  //get the details of the incoming message
+  type = Serial1.read();//first byte
+  //after first by, wait 35 seconds for the rest of the message to come in
   delay(35);
-  event_code = Serial1.read();
-  data_len = Serial1.read();
-  
+  event_code = Serial1.read();//second byte
+  data_len = Serial1.read(); //third byte
+
   p("-----------------------------\r\n");
   p("-Type        : 0x%02X\r\n", type);
   p("-EventCode   : 0x%02X\r\n", event_code);
   p("-Data Length : 0x%02X\r\n", data_len);
-  
-
-  
-  
   p("-Data: \r\n");
+    
+  Serial.print(type);
+  Serial.print("::");
+  Serial.print(event_code);
+  Serial.print("::");
+  Serial.print(data_len);
+  Serial.print("::");
   
+  //iterate all data to specified data_len
   for (int i = 0; i < data_len; i++){
     buf[i] = Serial1.read();
     Serial.print(buf[i]);
     Serial.print(":");
   }
   Serial.println();
+  
   //all bytes have been loaded at this point
   //translate buffer to info
   event = BUILD_UINT16(buf[0], buf[1]);
@@ -136,19 +135,17 @@ byte ble_event_process()
               }
            }
 
+          //see if the bytes of last_address match the found address 
           Serial.print("same: " );
           Serial.println(same);
           
           
           if(same){
-
-              //digitalWrite(DiscoveredLED, HIGH);
-
               flashLED(DiscoveredLED);
-
-          }else{
-              digitalWrite(DiscoveredLED, LOW);
           }
+          
+          
+          
           //added
           int currentIndex = 6;
           for(int i = 1; i <= num_devs; i++) { 
@@ -164,7 +161,7 @@ byte ble_event_process()
           //added
 
  
-         Serial.print("found_address:\r\n");
+         Serial.print("found_address: ");
          for(int k = 0; k < 6; k++) {
               Serial.print(found_address[k]);
               Serial.print(":");
@@ -206,6 +203,9 @@ byte ble_event_process()
     case 0x060D: // GAP_DeviceInformation
     {
         p("GAP_DeviceInformation\r\n");
+        
+        Serial.print("************RSSI: ");
+        Serial.println(buf[11]);
          
         break;
     }
